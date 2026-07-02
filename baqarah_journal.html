@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal سورة البقرة</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif; background:#f7f3ef; color:#1c1124; margin:0; padding:20px; }
+    .app { max-width:760px; margin:auto; background:white; border-radius:22px; padding:22px; box-shadow:0 8px 25px rgba(0,0,0,.08); }
+    h1 { margin-top:0; font-size:26px; }
+    .subtitle { color:#693e52; margin-top:-8px; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:18px 0; }
+    .card { background:#f7f3ef; border-radius:16px; padding:14px; text-align:center; }
+    .num { font-size:24px; font-weight:700; }
+    label { display:block; margin-top:12px; font-weight:600; }
+    input, textarea, select, button { width:100%; box-sizing:border-box; padding:12px; border-radius:12px; border:1px solid #ddd; font-size:16px; margin-top:6px; }
+    textarea { min-height:80px; resize:vertical; }
+    button { background:#693e52; color:white; border:0; margin-top:16px; font-weight:700; cursor:pointer; }
+    button.secondary { background:#badf96; color:#1c1124; }
+    .progress-wrap { background:#eee; border-radius:999px; overflow:hidden; height:18px; margin:10px 0 18px; }
+    .progress { background:#badf96; height:100%; width:0%; transition:.3s; }
+    table { width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
+    th, td { border-bottom:1px solid #eee; padding:10px; text-align:right; }
+    .done { color:#2e7d32; font-weight:700; }
+    .missed { color:#9a3412; font-weight:700; }
+    .small { font-size:13px; color:#666; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Journal سورة البقرة 🌿</h1>
+    <p class="subtitle">الهدف اليومي: نصف السورة أو 25 دقيقة قراءة.</p>
+
+    <div class="stats">
+      <div class="card"><div class="num" id="daysDone">0</div><div>أيام الالتزام</div></div>
+      <div class="card"><div class="num" id="percent">0%</div><div>نسبة الشهر</div></div>
+      <div class="card"><div class="num" id="minutes">0</div><div>دقائق القراءة</div></div>
+    </div>
+
+    <div class="small">تقدم الشهر</div>
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+
+    <label>التاريخ</label>
+    <input type="date" id="date" />
+
+    <label>هل أنجزتِ الهدف؟</label>
+    <select id="status">
+      <option value="done">نعم، قرأت نصف السورة</option>
+      <option value="partial">جزئي</option>
+      <option value="missed">لا</option>
+    </select>
+
+    <label>مدة القراءة بالدقائق</label>
+    <input type="number" id="readingMinutes" min="0" value="25" />
+
+    <label>ملاحظة اليوم</label>
+    <textarea id="note" placeholder="مثلاً: قرأت بعد الفجر، كنت هادئة، أو احتجت أرجع أركز..."></textarea>
+
+    <button onclick="saveEntry()">حفظ اليوم</button>
+    <button class="secondary" onclick="exportData()">تصدير البيانات</button>
+
+    <table>
+      <thead><tr><th>التاريخ</th><th>الحالة</th><th>الدقائق</th><th>الملاحظة</th><th></th></tr></thead>
+      <tbody id="entries"></tbody>
+    </table>
+  </div>
+
+<script>
+  const dateInput = document.getElementById("date");
+  dateInput.valueAsDate = new Date();
+  function getMonthKey(dateStr) { return dateStr.slice(0, 7); }
+  function loadEntries() { return JSON.parse(localStorage.getItem("baqarahJournal") || "[]"); }
+  function saveEntries(entries) { localStorage.setItem("baqarahJournal", JSON.stringify(entries)); }
+  function saveEntry() {
+    const date = dateInput.value;
+    const status = document.getElementById("status").value;
+    const minutes = Number(document.getElementById("readingMinutes").value || 0);
+    const note = document.getElementById("note").value.trim();
+    if (!date) return alert("اختاري التاريخ");
+    let entries = loadEntries().filter(e => e.date !== date);
+    entries.push({ date, status, minutes, note });
+    entries.sort((a, b) => b.date.localeCompare(a.date));
+    saveEntries(entries);
+    document.getElementById("note").value = "";
+    render();
+  }
+  function deleteEntry(date) { saveEntries(loadEntries().filter(e => e.date !== date)); render(); }
+  function statusText(status) { return status === "done" ? "منجز" : status === "partial" ? "جزئي" : "لم يتم"; }
+  function render() {
+    const entries = loadEntries();
+    const now = new Date();
+    const monthKey = now.toISOString().slice(0, 7);
+    const monthly = entries.filter(e => getMonthKey(e.date) === monthKey);
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const doneDays = monthly.filter(e => e.status === "done").length;
+    const totalMinutes = monthly.reduce((sum, e) => sum + Number(e.minutes || 0), 0);
+    const percentage = Math.round((doneDays / daysInMonth) * 100);
+    document.getElementById("daysDone").textContent = doneDays;
+    document.getElementById("percent").textContent = percentage + "%";
+    document.getElementById("minutes").textContent = totalMinutes;
+    document.getElementById("progress").style.width = percentage + "%";
+    const tbody = document.getElementById("entries");
+    tbody.innerHTML = "";
+    entries.forEach(e => {
+      const tr = document.createElement("tr");
+      const cls = e.status === "done" ? "done" : e.status === "missed" ? "missed" : "";
+      tr.innerHTML = `<td>${e.date}</td><td class="${cls}">${statusText(e.status)}</td><td>${e.minutes}</td><td>${e.note || "-"}</td><td><button style="padding:6px;margin:0;background:#9a3412" onclick="deleteEntry('${e.date}')">حذف</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  function exportData() {
+    const data = JSON.stringify(loadEntries(), null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "baqarah-journal.json"; a.click(); URL.revokeObjectURL(url);
+  }
+  render();
+</script>
+</body>
+</html>
