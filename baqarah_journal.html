@@ -3,177 +3,258 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Journal سورة البقرة</title>
+  <title>Baqarah Journal | سجل سورة البقرة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif; background:#f7f3ef; color:#1c1124; margin:0; padding:20px; }
-    .app { max-width:760px; margin:auto; background:white; border-radius:22px; padding:22px; box-shadow:0 8px 25px rgba(0,0,0,.08); }
-    h1 { margin-top:0; font-size:26px; }
-    .subtitle { color:#693e52; margin-top:-8px; }
-    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:18px 0; }
-    .card { background:#f7f3ef; border-radius:16px; padding:14px; text-align:center; }
-    .num { font-size:24px; font-weight:700; }
-    label { display:block; margin-top:12px; font-weight:600; }
-    input, textarea, select, button { width:100%; box-sizing:border-box; padding:12px; border-radius:12px; border:1px solid #ddd; font-size:16px; margin-top:6px; }
-    textarea { min-height:80px; resize:vertical; }
-    button { background:#693e52; color:white; border:0; margin-top:16px; font-weight:700; cursor:pointer; }
-    button.secondary { background:#badf96; color:#1c1124; }
-    button.toggle-btn { background:#badf96; color:#1c1124; font-size: 18px; padding: 16px; margin-bottom: 20px; }
-    .progress-wrap { background:#eee; border-radius:999px; overflow:hidden; height:18px; margin:10px 0 18px; }
-    .progress { background:#badf96; height:100%; width:0%; transition:.3s; }
-    table { width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
-    th, td { border-bottom:1px solid #eee; padding:10px; text-align:right; }
-    .done { color:#2e7d32; font-weight:700; }
-    .missed { color:#9a3412; font-weight:700; }
-    .small { font-size:13px; color:#666; }
-    .loading { text-align: center; color: #693e52; margin: 20px; }
+    :root {
+      --emerald-deep: #062c21;
+      --emerald-light: #0a4d3c;
+      --gold-accent: #d4af37;
+      --gold-muted: #b8860b;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Amiri', serif;
+      background-color: var(--emerald-deep);
+      color: #e2e8f0;
+    }
+    .glass-card {
+      background: rgba(10, 77, 60, 0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(212, 175, 55, 0.1);
+    }
+    .gold-gradient-text {
+      background: linear-gradient(to right, #d4af37, #f1d592, #d4af37);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gold-border-glow:focus {
+      outline: none;
+      border-color: var(--gold-accent);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    }
+    .arabic-font { font-family: 'Amiri', serif; }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
   </style>
 </head>
-<body>
-  <div class="app">
-    <h1>Journal سورة البقرة 🌿</h1>
-    <p class="subtitle">الهدف اليومي: نصف السورة أو 25 دقيقة قراءة.</p>
+<body class="min-h-screen pb-12">
+  <div class="max-w-md mx-auto px-6 pt-8">
+    <!-- Header -->
+    <header class="text-center mb-10">
+      <h1 class="text-4xl font-bold gold-gradient-text mb-2 arabic-font">سورة البقرة</h1>
+      <p class="text-emerald-200/70 text-sm font-medium tracking-wide uppercase">Spiritual Journal</p>
+    </header>
 
-    <button id="quickToggle" class="toggle-btn" onclick="quickDone()">✅ أنجزت نصف السورة لليوم!</button>
-
-    <div class="stats">
-      <div class="card"><div class="num" id="daysDone">0</div><div>أيام الالتزام</div></div>
-      <div class="card"><div class="num" id="percent">0%</div><div>نسبة الشهر</div></div>
-      <div class="card"><div class="num" id="minutes">0</div><div>دقائق القراءة</div></div>
+    <!-- Quick Toggle -->
+    <div class="mb-10 text-center">
+      <button 
+        id="quickToggle" 
+        onclick="quickDone()"
+        class="group relative w-40 h-40 mx-auto flex items-center justify-center rounded-full border-2 border-gold-accent/30 bg-emerald-light/20 transition-all duration-500 hover:border-gold-accent hover:scale-105 active:scale-95 overflow-hidden"
+      >
+        <div class="absolute inset-0 bg-gold-accent/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="text-center z-10">
+          <span class="block text-3xl mb-1">🌿</span>
+          <span class="block text-xs font-bold text-gold-accent uppercase tracking-widest">Mark Done</span>
+        </div>
+      </button>
+      <p class="mt-4 text-emerald-100/60 text-xs italic">أتممت نصف السورة لليوم؟ اضغطي هنا</p>
     </div>
 
-    <div class="small">تقدم الشهر</div>
-    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+    <!-- Stats/Streak Grid -->
+    <div class="grid grid-cols-2 gap-4 mb-8">
+      <div class="glass-card rounded-3xl p-5 text-center border-t-2 border-t-gold-accent/20">
+        <p class="text-xs text-emerald-200/50 uppercase tracking-tighter mb-1">Current Streak</p>
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-3xl font-bold text-white" id="streakCounter">0</span>
+          <span class="text-gold-accent">✨</span>
+        </div>
+        <p class="text-[10px] text-emerald-200/30 mt-1">Days of devotion</p>
+      </div>
+      <div class="glass-card rounded-3xl p-5 text-center border-t-2 border-t-gold-accent/20">
+        <p class="text-xs text-emerald-200/50 uppercase tracking-tighter mb-1">Month Progress</p>
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-3xl font-bold text-white" id="percentComplete">0%</span>
+        </div>
+        <div class="w-full bg-emerald-900/50 h-1 rounded-full mt-3 overflow-hidden">
+          <div id="progressBar" class="bg-gold-accent h-full transition-all duration-1000" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
 
-    <div id="loading" class="loading" style="display:none;">جاري التحميل...</div>
+    <!-- Manual Entry Section (Accordion style) -->
+    <details class="glass-card rounded-3xl mb-8 group overflow-hidden border-gold-accent/10">
+      <summary class="list-none p-5 cursor-pointer flex justify-between items-center text-gold-accent font-semibold text-sm">
+        <span>سجل يدوي / تعديل</span>
+        <span class="transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <div class="p-6 pt-0 space-y-4">
+        <div>
+          <label class="block text-[10px] uppercase text-emerald-200/40 mb-1 ml-1">Date</label>
+          <input type="date" id="dateInput" class="w-full bg-emerald-900/40 border border-emerald-700/50 rounded-xl px-4 py-3 text-sm gold-border-glow">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] uppercase text-emerald-200/40 mb-1 ml-1">Status</label>
+            <select id="statusInput" class="w-full bg-emerald-900/40 border border-emerald-700/50 rounded-xl px-4 py-3 text-sm gold-border-glow">
+              <option value="true">Completed</option>
+              <option value="false">Partial / Not Done</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase text-emerald-200/40 mb-1 ml-1">Mins</label>
+            <input type="number" id="minutesInput" value="25" class="w-full bg-emerald-900/40 border border-emerald-700/50 rounded-xl px-4 py-3 text-sm gold-border-glow">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase text-emerald-200/40 mb-1 ml-1">Reflection</label>
+          <textarea id="noteInput" rows="2" class="w-full bg-emerald-900/40 border border-emerald-700/50 rounded-xl px-4 py-3 text-sm gold-border-glow" placeholder="كيف كان تركيزك اليوم؟"></textarea>
+        </div>
+        <button onclick="saveEntry()" class="w-full bg-gold-accent hover:bg-gold-muted text-emerald-deep font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-widest shadow-lg">Save Entry</button>
+      </div>
+    </details>
 
-    <label>التاريخ</label>
-    <input type="date" id="date" />
-
-    <label>هل أنجزتِ الهدف؟</label>
-    <select id="status">
-      <option value="true">نعم، قرأت نصف السورة</option>
-      <option value="false">لا / جزئي</option>
-    </select>
-
-    <label>مدة القراءة بالدقائق</label>
-    <input type="number" id="readingMinutes" min="0" value="25" />
-
-    <label>ملاحظة اليوم</label>
-    <textarea id="note" placeholder="مثلاً: قرأت بعد الفجر، كنت هادئة، أو احتجت أرجع أركز..."></textarea>
-
-    <button onclick="saveEntry()">حفظ اليوم</button>
-
-    <table>
-      <thead><tr><th>التاريخ</th><th>الحالة</th><th>الدقائق</th><th>الملاحظة</th><th></th></tr></thead>
-      <tbody id="entries"></tbody>
-    </table>
+    <!-- History -->
+    <div class="space-y-4">
+      <h3 class="text-xs uppercase tracking-[0.2em] text-gold-accent/60 font-bold ml-1 mb-4">Recent Reflections</h3>
+      <div id="historyList" class="space-y-3">
+        <!-- Cards injected here -->
+      </div>
+    </div>
   </div>
 
-<script>
-  const SUPABASE_URL = 'https://npdxyjvokyhqcsrgwhfw.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_lRJiN6HC_hxwcsAMnvqEXQ_q1BxVd1V';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 glass-card border-gold-accent/40 px-6 py-3 rounded-full text-xs text-gold-accent font-bold opacity-0 transition-opacity pointer-events-none z-50">
+    تم حفظ اليوم بنجاح 🌿
+  </div>
 
-  const dateInput = document.getElementById("date");
-  dateInput.valueAsDate = new Date();
+  <script>
+    const SUPABASE_URL = 'https://npdxyjvokyhqcsrgwhfw.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_lRJiN6HC_hxwcsAMnvqEXQ_q1BxVd1V';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  async function loadEntries() {
-    showLoading(true);
-    const { data, error } = await supabaseClient
-      .from('baqarah_log')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    showLoading(false);
-    if (error) {
-      console.error('Error loading entries:', error);
-      return [];
+    document.getElementById('dateInput').valueAsDate = new Date();
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.opacity = '1';
+      setTimeout(() => t.style.opacity = '0', 3000);
     }
-    return data;
-  }
 
-  async function quickDone() {
-    const date = new Date().toISOString().split('T')[0];
-    await upsertEntry(date, true, 25, "تم الإنجاز عبر التبديل السريع");
-  }
+    async function quickDone() {
+      const date = new Date().toISOString().split('T')[0];
+      await upsertEntry(date, true, 25, "Quick logged via premium toggle ✨");
+    }
 
-  async function saveEntry() {
-    const date = dateInput.value;
-    const completed = document.getElementById("status").value === "true";
-    const minutes = Number(document.getElementById("readingMinutes").value || 0);
-    const note = document.getElementById("note").value.trim();
-    if (!date) return alert("اختاري التاريخ");
-    await upsertEntry(date, completed, minutes, note);
-  }
+    async function saveEntry() {
+      const date = document.getElementById('dateInput').value;
+      const completed = document.getElementById('statusInput').value === 'true';
+      const reading_time = Number(document.getElementById('minutesInput').value);
+      const notes = document.getElementById('noteInput').value;
+      if (!date) return;
+      await upsertEntry(date, completed, reading_time, notes);
+    }
 
-  async function upsertEntry(date, completed, reading_time, notes) {
-    showLoading(true);
-    const { error } = await supabaseClient
-      .from('baqarah_log')
-      .upsert({ date, completed, reading_time, notes }, { onConflict: 'date' });
-    
-    showLoading(false);
-    if (error) {
-      alert("خطأ في الحفظ: " + error.message);
-    } else {
-      document.getElementById("note").value = "";
+    async function upsertEntry(date, completed, reading_time, notes) {
+      const { error } = await supabaseClient
+        .from('baqarah_log')
+        .upsert({ date, completed, reading_time, notes }, { onConflict: 'date' });
+      
+      if (error) {
+        alert("Error: " + error.message);
+      } else {
+        showToast("Entry Logged Successfully");
+        document.getElementById('noteInput').value = "";
+        render();
+      }
+    }
+
+    async function deleteEntry(id) {
+      if (!confirm("Remove this entry?")) return;
+      await supabaseClient.from('baqarah_log').delete().eq('id', id);
       render();
     }
-  }
 
-  async function deleteEntry(id) {
-    if (!confirm("هل أنتِ متأكدة من الحذف؟")) return;
-    showLoading(true);
-    const { error } = await supabaseClient
-      .from('baqarah_log')
-      .delete()
-      .eq('id', id);
-    showLoading(false);
-    if (error) {
-      alert("خطأ في الحذف: " + error.message);
-    } else {
-      render();
+    function calculateStreak(entries) {
+      if (!entries.length) return 0;
+      let streak = 0;
+      const today = new Date().toISOString().split('T')[0];
+      const sorted = [...entries].sort((a,b) => b.date.localeCompare(a.date));
+      
+      // If the most recent entry isn't today or yesterday, streak is broken
+      let checkDate = new Date(sorted[0].date);
+      const now = new Date();
+      const diff = (now - checkDate) / (1000 * 60 * 60 * 24);
+      if (diff > 2) return 0;
+
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].completed) {
+          streak++;
+          // Check if next one is exactly one day before
+          if (i + 1 < sorted.length) {
+            const current = new Date(sorted[i].date);
+            const prev = new Date(sorted[i+1].date);
+            const gap = (current - prev) / (1000 * 60 * 60 * 24);
+            if (gap > 1) break;
+          }
+        } else {
+          break;
+        }
+      }
+      return streak;
     }
-  }
 
-  function showLoading(show) {
-    document.getElementById("loading").style.display = show ? "block" : "none";
-  }
+    async function render() {
+      const { data: entries, error } = await supabaseClient
+        .from('baqarah_log')
+        .select('*')
+        .order('date', { ascending: false });
 
-  async function render() {
-    const entries = await loadEntries();
-    const now = new Date();
-    const monthStr = now.toISOString().slice(0, 7);
-    const monthly = entries.filter(e => e.date.startsWith(monthStr));
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const doneDays = monthly.filter(e => e.completed).length;
-    const totalMinutes = monthly.reduce((sum, e) => sum + (e.reading_time || 0), 0);
-    const percentage = Math.round((doneDays / daysInMonth) * 100) || 0;
+      if (error) return;
 
-    document.getElementById("daysDone").textContent = doneDays;
-    document.getElementById("percent").textContent = percentage + "%";
-    document.getElementById("minutes").textContent = totalMinutes;
-    document.getElementById("progress").style.width = percentage + "%";
+      // Stats
+      const streak = calculateStreak(entries.filter(e => e.completed));
+      document.getElementById('streakCounter').innerText = streak;
 
-    const tbody = document.getElementById("entries");
-    tbody.innerHTML = "";
-    entries.forEach(e => {
-      const tr = document.createElement("tr");
-      const cls = e.completed ? "done" : "missed";
-      const statusText = e.completed ? "منجز" : "لم يتم";
-      tr.innerHTML = `
-        <td>${e.date}</td>
-        <td class="${cls}">${statusText}</td>
-        <td>${e.reading_time}</td>
-        <td>${e.notes || "-"}</td>
-        <td><button style="padding:6px;margin:0;background:#9a3412" onclick="deleteEntry('${e.id}')">حذف</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
+      const now = new Date();
+      const monthStr = now.toISOString().slice(0, 7);
+      const monthly = entries.filter(e => e.date.startsWith(monthStr));
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const doneDays = monthly.filter(e => e.completed).length;
+      const pct = Math.round((doneDays / daysInMonth) * 100);
+      
+      document.getElementById('percentComplete').innerText = pct + "%";
+      document.getElementById('progressBar').style.width = pct + "%";
 
-  render();
-</script>
+      // List
+      const list = document.getElementById('historyList');
+      list.innerHTML = "";
+      entries.slice(0, 10).forEach(e => {
+        const card = document.createElement('div');
+        card.className = "glass-card rounded-2xl p-4 border-l-2 " + (e.completed ? "border-l-gold-accent" : "border-l-emerald-700/50");
+        card.innerHTML = `
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <span class="text-[10px] text-emerald-200/40 font-bold uppercase tracking-wider">${new Date(e.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+              <h4 class="text-sm font-semibold text-emerald-50">${e.completed ? "أتممت الورد" : "ورد جزئي"}</h4>
+            </div>
+            <span class="text-[10px] bg-emerald-900/60 px-2 py-1 rounded-md text-gold-accent font-medium">${e.reading_time} min</span>
+          </div>
+          ${e.notes ? `<p class="text-xs text-emerald-200/60 italic leading-relaxed mb-3">"${e.notes}"</p>` : ''}
+          <div class="flex justify-end">
+             <button onclick="deleteEntry(${e.id})" class="text-[10px] text-emerald-200/20 hover:text-red-400 uppercase tracking-tighter">Remove</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    render();
+  </script>
 </body>
 </html>
