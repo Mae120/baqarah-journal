@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Journal سورة البقرة</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif; background:#f7f3ef; color:#1c1124; margin:0; padding:20px; }
     .app { max-width:760px; margin:auto; background:white; border-radius:22px; padding:22px; box-shadow:0 8px 25px rgba(0,0,0,.08); }
@@ -17,6 +18,7 @@
     textarea { min-height:80px; resize:vertical; }
     button { background:#693e52; color:white; border:0; margin-top:16px; font-weight:700; cursor:pointer; }
     button.secondary { background:#badf96; color:#1c1124; }
+    button.toggle-btn { background:#badf96; color:#1c1124; font-size: 18px; padding: 16px; margin-bottom: 20px; }
     .progress-wrap { background:#eee; border-radius:999px; overflow:hidden; height:18px; margin:10px 0 18px; }
     .progress { background:#badf96; height:100%; width:0%; transition:.3s; }
     table { width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
@@ -24,12 +26,15 @@
     .done { color:#2e7d32; font-weight:700; }
     .missed { color:#9a3412; font-weight:700; }
     .small { font-size:13px; color:#666; }
+    .loading { text-align: center; color: #693e52; margin: 20px; }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>Journal سورة البقرة 🌿</h1>
     <p class="subtitle">الهدف اليومي: نصف السورة أو 25 دقيقة قراءة.</p>
+
+    <button id="quickToggle" class="toggle-btn" onclick="quickDone()">✅ أنجزت نصف السورة لليوم!</button>
 
     <div class="stats">
       <div class="card"><div class="num" id="daysDone">0</div><div>أيام الالتزام</div></div>
@@ -40,14 +45,15 @@
     <div class="small">تقدم الشهر</div>
     <div class="progress-wrap"><div class="progress" id="progress"></div></div>
 
+    <div id="loading" class="loading" style="display:none;">جاري التحميل...</div>
+
     <label>التاريخ</label>
     <input type="date" id="date" />
 
     <label>هل أنجزتِ الهدف؟</label>
     <select id="status">
-      <option value="done">نعم، قرأت نصف السورة</option>
-      <option value="partial">جزئي</option>
-      <option value="missed">لا</option>
+      <option value="true">نعم، قرأت نصف السورة</option>
+      <option value="false">لا / جزئي</option>
     </select>
 
     <label>مدة القراءة بالدقائق</label>
@@ -57,7 +63,6 @@
     <textarea id="note" placeholder="مثلاً: قرأت بعد الفجر، كنت هادئة، أو احتجت أرجع أركز..."></textarea>
 
     <button onclick="saveEntry()">حفظ اليوم</button>
-    <button class="secondary" onclick="exportData()">تصدير البيانات</button>
 
     <table>
       <thead><tr><th>التاريخ</th><th>الحالة</th><th>الدقائق</th><th>الملاحظة</th><th></th></tr></thead>
@@ -66,55 +71,108 @@
   </div>
 
 <script>
+  const SUPABASE_URL = 'https://npdxyjvokyhqcsrgwhfw.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_lRJiN6HC_hxwcsAMnvqEXQ_q1BxVd1V';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const dateInput = document.getElementById("date");
   dateInput.valueAsDate = new Date();
-  function getMonthKey(dateStr) { return dateStr.slice(0, 7); }
-  function loadEntries() { return JSON.parse(localStorage.getItem("baqarahJournal") || "[]"); }
-  function saveEntries(entries) { localStorage.setItem("baqarahJournal", JSON.stringify(entries)); }
-  function saveEntry() {
+
+  async function loadEntries() {
+    showLoading(true);
+    const { data, error } = await supabaseClient
+      .from('baqarah_log')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    showLoading(false);
+    if (error) {
+      console.error('Error loading entries:', error);
+      return [];
+    }
+    return data;
+  }
+
+  async function quickDone() {
+    const date = new Date().toISOString().split('T')[0];
+    await upsertEntry(date, true, 25, "تم الإنجاز عبر التبديل السريع");
+  }
+
+  async function saveEntry() {
     const date = dateInput.value;
-    const status = document.getElementById("status").value;
+    const completed = document.getElementById("status").value === "true";
     const minutes = Number(document.getElementById("readingMinutes").value || 0);
     const note = document.getElementById("note").value.trim();
     if (!date) return alert("اختاري التاريخ");
-    let entries = loadEntries().filter(e => e.date !== date);
-    entries.push({ date, status, minutes, note });
-    entries.sort((a, b) => b.date.localeCompare(a.date));
-    saveEntries(entries);
-    document.getElementById("note").value = "";
-    render();
+    await upsertEntry(date, completed, minutes, note);
   }
-  function deleteEntry(date) { saveEntries(loadEntries().filter(e => e.date !== date)); render(); }
-  function statusText(status) { return status === "done" ? "منجز" : status === "partial" ? "جزئي" : "لم يتم"; }
-  function render() {
-    const entries = loadEntries();
+
+  async function upsertEntry(date, completed, reading_time, notes) {
+    showLoading(true);
+    const { error } = await supabaseClient
+      .from('baqarah_log')
+      .upsert({ date, completed, reading_time, notes }, { onConflict: 'date' });
+    
+    showLoading(false);
+    if (error) {
+      alert("خطأ في الحفظ: " + error.message);
+    } else {
+      document.getElementById("note").value = "";
+      render();
+    }
+  }
+
+  async function deleteEntry(id) {
+    if (!confirm("هل أنتِ متأكدة من الحذف؟")) return;
+    showLoading(true);
+    const { error } = await supabaseClient
+      .from('baqarah_log')
+      .delete()
+      .eq('id', id);
+    showLoading(false);
+    if (error) {
+      alert("خطأ في الحذف: " + error.message);
+    } else {
+      render();
+    }
+  }
+
+  function showLoading(show) {
+    document.getElementById("loading").style.display = show ? "block" : "none";
+  }
+
+  async function render() {
+    const entries = await loadEntries();
     const now = new Date();
-    const monthKey = now.toISOString().slice(0, 7);
-    const monthly = entries.filter(e => getMonthKey(e.date) === monthKey);
+    const monthStr = now.toISOString().slice(0, 7);
+    const monthly = entries.filter(e => e.date.startsWith(monthStr));
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const doneDays = monthly.filter(e => e.status === "done").length;
-    const totalMinutes = monthly.reduce((sum, e) => sum + Number(e.minutes || 0), 0);
-    const percentage = Math.round((doneDays / daysInMonth) * 100);
+    const doneDays = monthly.filter(e => e.completed).length;
+    const totalMinutes = monthly.reduce((sum, e) => sum + (e.reading_time || 0), 0);
+    const percentage = Math.round((doneDays / daysInMonth) * 100) || 0;
+
     document.getElementById("daysDone").textContent = doneDays;
     document.getElementById("percent").textContent = percentage + "%";
     document.getElementById("minutes").textContent = totalMinutes;
     document.getElementById("progress").style.width = percentage + "%";
+
     const tbody = document.getElementById("entries");
     tbody.innerHTML = "";
     entries.forEach(e => {
       const tr = document.createElement("tr");
-      const cls = e.status === "done" ? "done" : e.status === "missed" ? "missed" : "";
-      tr.innerHTML = `<td>${e.date}</td><td class="${cls}">${statusText(e.status)}</td><td>${e.minutes}</td><td>${e.note || "-"}</td><td><button style="padding:6px;margin:0;background:#9a3412" onclick="deleteEntry('${e.date}')">حذف</button></td>`;
+      const cls = e.completed ? "done" : "missed";
+      const statusText = e.completed ? "منجز" : "لم يتم";
+      tr.innerHTML = `
+        <td>${e.date}</td>
+        <td class="${cls}">${statusText}</td>
+        <td>${e.reading_time}</td>
+        <td>${e.notes || "-"}</td>
+        <td><button style="padding:6px;margin:0;background:#9a3412" onclick="deleteEntry('${e.id}')">حذف</button></td>
+      `;
       tbody.appendChild(tr);
     });
   }
-  function exportData() {
-    const data = JSON.stringify(loadEntries(), null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "baqarah-journal.json"; a.click(); URL.revokeObjectURL(url);
-  }
+
   render();
 </script>
 </body>
